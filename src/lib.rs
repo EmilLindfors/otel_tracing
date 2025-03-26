@@ -5,7 +5,7 @@ mod services;
 pub mod facade;
 
 pub use facade as telemetry;
-pub use domain::telemetry::{SpanContext, MetricContext, LogContext, AttributeValue, TelemetryError};
+pub use domain::telemetry::{SpanContext, MetricContext, LogContext, AttributeValue, TelemetryError, LogLevel};
 
 /// Create a span for tracing operations.
 /// 
@@ -112,6 +112,29 @@ macro_rules! with_async_span {
     };
 }
 
+
+/// Create a counter metric.
+/// 
+/// # Examples
+/// 
+/// ```
+/// // Simple counter with just a name
+/// let counter = counter!("requests_processed");
+/// 
+/// // Counter with description and unit
+/// let counter = counter!("requests_processed", "Number of requests processed", "requests");
+/// 
+/// // Counter with attributes
+/// let counter = counter!("requests_processed",
+///     "Number of requests processed",
+///     "requests",
+///     "service" => "api",
+///     "status" => "200"
+/// );
+/// 
+/// // Increment the counter
+/// counter.inc();
+/// ```
 #[macro_export]
 macro_rules! counter {
     ($name:expr) => {
@@ -142,6 +165,28 @@ macro_rules! counter {
     };
 }
 
+/// Create a gauge metric.
+/// 
+/// # Examples
+/// 
+/// ```
+/// // Simple gauge with just a name
+/// let gauge = gauge!("cpu_usage");
+/// 
+/// // Gauge with description and unit
+/// let gauge = gauge!("cpu_usage", "CPU usage percentage", "percent");
+/// 
+/// // Gauge with attributes
+/// let gauge = gauge!("cpu_usage",
+///    "CPU usage percentage",
+///   "percent",
+///   "service" => "api",
+///  "status" => "200"
+/// );
+/// 
+/// // Set the gauge value
+/// gauge.set(42.0);
+/// ```
 #[macro_export]
 macro_rules! gauge {
     ($name:expr) => {
@@ -172,6 +217,29 @@ macro_rules! gauge {
     };
 }
 
+
+/// Create a histogram metric.
+/// 
+/// # Examples
+/// 
+/// ```
+/// // Simple histogram with just a name
+/// let histogram = histogram!("request_duration");
+/// 
+/// // Histogram with description and unit
+/// let histogram = histogram!("request_duration", "Duration of requests", "milliseconds");
+/// 
+/// // Histogram with attributes
+/// let histogram = histogram!("request_duration",
+///    "Duration of requests",
+///  "milliseconds",
+/// "service" => "api",
+/// "status" => "200"
+/// );
+/// 
+/// // Record a value in the histogram
+/// histogram.record(42.0);
+/// ```
 #[macro_export]
 macro_rules! histogram {
     ($name:expr) => {
@@ -202,10 +270,39 @@ macro_rules! histogram {
     };
 }
 
+/// Log a message with a specific log level.
+/// 
+/// # Examples
+/// 
+/// ```
+/// // Simple log message with INFO level (default)
+/// log!("Processing request");
+/// 
+/// // Log message with specific level
+/// log!(ERROR, "Failed to process request");
+/// 
+/// // Log message with level and target
+/// log!(WARN, "Processing request", target: "app::process_request");
+/// 
+/// // Log message with level and attributes
+/// log!(INFO, "Processing request", "user_id" => "12345", "request_id" => "abc-123");
+/// 
+/// // Log message with level, target and attributes
+/// log!(DEBUG, "Processing request", target: "app::process_request", "user_id" => "12345", "request_id" => "abc-123");
+/// ```
 #[macro_export]
 macro_rules! log {
     ($message:expr) => {
         $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Info,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![],
+        })
+    };
+    ($level:ident, $message:expr) => {
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::$level,
             message: $message.to_string(),
             target: None,
             attributes: vec![],
@@ -213,6 +310,15 @@ macro_rules! log {
     };
     ($message:expr, target: $target:expr) => {
         $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Info,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![],
+        })
+    };
+    ($level:ident, $message:expr, target: $target:expr) => {
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::$level,
             message: $message.to_string(),
             target: Some($target.to_string()),
             attributes: vec![],
@@ -220,6 +326,17 @@ macro_rules! log {
     };
     ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
         $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Info,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
+    };
+    ($level:ident, $message:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::$level,
             message: $message.to_string(),
             target: None,
             attributes: vec![
@@ -229,11 +346,142 @@ macro_rules! log {
     };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
         $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Info,
             message: $message.to_string(),
             target: Some($target.to_string()),
             attributes: vec![
                 $(($key.to_string(), $value.into())),+
             ],
         })
+    };
+    ($level:ident, $message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::$level,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
+    };
+}
+
+/// Log a message at DEBUG level.
+/// 
+/// # Examples
+/// 
+/// ```
+/// // Simple debug message
+/// debug!("Processing request details");
+/// 
+/// // With target
+/// debug!("Processing request details", target: "app::process_request");
+/// 
+/// // With attributes
+/// debug!("Processing request details", "user_id" => "12345", "request_id" => "abc-123");
+/// ```
+#[macro_export]
+macro_rules! debug {
+    ($message:expr) => {
+        $crate::log!(DEBUG, $message)
+    };
+    ($message:expr, target: $target:expr) => {
+        $crate::log!(DEBUG, $message, target: $target)
+    };
+    ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::log!(DEBUG, $message, $($key => $value),+)
+    };
+    ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::log!(DEBUG, $message, target: $target, $($key => $value),+)
+    };
+}
+
+/// Log a message at INFO level.
+/// 
+/// # Examples
+/// 
+/// ```
+/// // Simple info message
+/// info!("Request processed successfully");
+/// 
+/// // With target
+/// info!("Request processed successfully", target: "app::process_request");
+/// 
+/// // With attributes
+/// info!("Request processed successfully", "user_id" => "12345", "request_id" => "abc-123");
+/// ```
+#[macro_export]
+macro_rules! info {
+    ($message:expr) => {
+        $crate::log!(INFO, $message)
+    };
+    ($message:expr, target: $target:expr) => {
+        $crate::log!(INFO, $message, target: $target)
+    };
+    ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::log!(INFO, $message, $($key => $value),+)
+    };
+    ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::log!(INFO, $message, target: $target, $($key => $value),+)
+    };
+}
+
+/// Log a message at WARN level.
+/// 
+/// # Examples
+/// 
+/// ```
+/// // Simple warning message
+/// warn!("Resource usage high");
+/// 
+/// // With target
+/// warn!("Resource usage high", target: "app::resource_monitor");
+/// 
+/// // With attributes
+/// warn!("Resource usage high", "cpu" => "85%", "memory" => "90%");
+/// ```
+#[macro_export]
+macro_rules! warn {
+    ($message:expr) => {
+        $crate::log!(WARN, $message)
+    };
+    ($message:expr, target: $target:expr) => {
+        $crate::log!(WARN, $message, target: $target)
+    };
+    ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::log!(WARN, $message, $($key => $value),+)
+    };
+    ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::log!(WARN, $message, target: $target, $($key => $value),+)
+    };
+}
+
+/// Log a message at ERROR level.
+/// 
+/// # Examples
+/// 
+/// ```
+/// // Simple error message
+/// error!("Failed to process request");
+/// 
+/// // With target
+/// error!("Failed to process request", target: "app::process_request");
+/// 
+/// // With attributes
+/// error!("Failed to process request", "user_id" => "12345", "error_code" => "500");
+/// ```
+#[macro_export]
+macro_rules! error {
+    ($message:expr) => {
+        $crate::log!(ERROR, $message)
+    };
+    ($message:expr, target: $target:expr) => {
+        $crate::log!(ERROR, $message, target: $target)
+    };
+    ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::log!(ERROR, $message, $($key => $value),+)
+    };
+    ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
+        $crate::log!(ERROR, $message, target: $target, $($key => $value),+)
     };
 }

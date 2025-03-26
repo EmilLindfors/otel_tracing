@@ -46,6 +46,16 @@ pub enum AttributeValue {
     Bool(bool),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+    Critical,
+}
+
 #[derive(Debug, Clone)]
 pub struct MetricContext {
     pub name: String,
@@ -56,6 +66,7 @@ pub struct MetricContext {
 
 #[derive(Debug, Clone)]
 pub struct LogContext {
+    pub level: LogLevel,
     pub message: String,
     pub target: Option<String>,
     pub attributes: Vec<(String, AttributeValue)>,
