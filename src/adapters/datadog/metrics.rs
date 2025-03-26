@@ -41,7 +41,7 @@ impl DatadogMetrics {
         if !normalized.contains('.') {
             format!(
                 "{}.{}",
-                "emil-test",
+                std::env::var("OTEL_SERVICE_NAME").unwrap_or("service".to_string()),
                 normalized.to_lowercase()
             )
         } else {
