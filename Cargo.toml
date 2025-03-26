@@ -3,4 +3,15 @@ name = "otel_tracing"
 version = "0.1.0"
 edition = "2021"
 
+
 [dependencies]
+tokio = "1.44.1"
+opentelemetry = "0.29"
+opentelemetry-otlp = { version = "0.29.0", features = ["grpc-tonic"] }
+opentelemetry-resource-detectors = { git ="https://github.com/open-telemetry/opentelemetry-rust-contrib.git"}
+opentelemetry_sdk = "0.29"
+dotenvy = "0.15.7"
+tracing = "0.1.41"
+opentelemetry-appender-tracing = "0.29"
+tracing-subscriber = {version = "0.3.19", features =["env-filter","registry", "std", "fmt"]}
+async-trait = "0.1.88"
