@@ -290,8 +290,8 @@ macro_rules! histogram {
 /// // Log message with level, target and attributes
 /// log!(DEBUG, "Processing request", target: "app::process_request", "user_id" => "12345", "request_id" => "abc-123");
 /// ```
-#[macro_export]
 macro_rules! log {
+    // Without level (default to Info)
     ($message:expr) => {
         $crate::telemetry::log($crate::LogContext {
             level: $crate::LogLevel::Info,
@@ -300,25 +300,9 @@ macro_rules! log {
             attributes: vec![],
         })
     };
-    ($level:ident, $message:expr) => {
-        $crate::telemetry::log($crate::LogContext {
-            level: $crate::LogLevel::$level,
-            message: $message.to_string(),
-            target: None,
-            attributes: vec![],
-        })
-    };
     ($message:expr, target: $target:expr) => {
         $crate::telemetry::log($crate::LogContext {
             level: $crate::LogLevel::Info,
-            message: $message.to_string(),
-            target: Some($target.to_string()),
-            attributes: vec![],
-        })
-    };
-    ($level:ident, $message:expr, target: $target:expr) => {
-        $crate::telemetry::log($crate::LogContext {
-            level: $crate::LogLevel::$level,
             message: $message.to_string(),
             target: Some($target.to_string()),
             attributes: vec![],
@@ -334,29 +318,9 @@ macro_rules! log {
             ],
         })
     };
-    ($level:ident, $message:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::telemetry::log($crate::LogContext {
-            level: $crate::LogLevel::$level,
-            message: $message.to_string(),
-            target: None,
-            attributes: vec![
-                $(($key.to_string(), $value.into())),+
-            ],
-        })
-    };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
         $crate::telemetry::log($crate::LogContext {
             level: $crate::LogLevel::Info,
-            message: $message.to_string(),
-            target: Some($target.to_string()),
-            attributes: vec![
-                $(($key.to_string(), $value.into())),+
-            ],
-        })
-    };
-    ($level:ident, $message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::telemetry::log($crate::LogContext {
-            level: $crate::LogLevel::$level,
             message: $message.to_string(),
             target: Some($target.to_string()),
             attributes: vec![
@@ -381,21 +345,44 @@ macro_rules! log {
 /// debug!("Processing request details", "user_id" => "12345", "request_id" => "abc-123");
 /// ```
 #[macro_export]
-macro_rules! debug {
+macro_rules! debug_log {
     ($message:expr) => {
-        $crate::log!(DEBUG, $message)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Debug,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![],
+        })
     };
     ($message:expr, target: $target:expr) => {
-        $crate::log!(DEBUG, $message, target: $target)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Debug,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![],
+        })
     };
     ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::log!(DEBUG, $message, $($key => $value),+)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Debug,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
     };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::log!(DEBUG, $message, target: $target, $($key => $value),+)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Debug,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
     };
 }
-
 /// Log a message at INFO level.
 /// 
 /// # Examples
@@ -411,18 +398,42 @@ macro_rules! debug {
 /// info!("Request processed successfully", "user_id" => "12345", "request_id" => "abc-123");
 /// ```
 #[macro_export]
-macro_rules! info {
+macro_rules! info_log {
     ($message:expr) => {
-        $crate::log!(INFO, $message)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Info,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![],
+        })
     };
     ($message:expr, target: $target:expr) => {
-        $crate::log!(INFO, $message, target: $target)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Info,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![],
+        })
     };
     ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::log!(INFO, $message, $($key => $value),+)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Info,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
     };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::log!(INFO, $message, target: $target, $($key => $value),+)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Info,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
     };
 }
 
@@ -441,20 +452,45 @@ macro_rules! info {
 /// warn!("Resource usage high", "cpu" => "85%", "memory" => "90%");
 /// ```
 #[macro_export]
-macro_rules! warn {
+macro_rules! warn_log {
     ($message:expr) => {
-        $crate::log!(WARN, $message)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Warn,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![],
+        })
     };
     ($message:expr, target: $target:expr) => {
-        $crate::log!(WARN, $message, target: $target)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Warn,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![],
+        })
     };
     ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::log!(WARN, $message, $($key => $value),+)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Warn,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
     };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::log!(WARN, $message, target: $target, $($key => $value),+)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Warn,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
     };
 }
+
 
 /// Log a message at ERROR level.
 /// 
@@ -471,17 +507,41 @@ macro_rules! warn {
 /// error!("Failed to process request", "user_id" => "12345", "error_code" => "500");
 /// ```
 #[macro_export]
-macro_rules! error {
+macro_rules! error_log {
     ($message:expr) => {
-        $crate::log!(ERROR, $message)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Error,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![],
+        })
     };
     ($message:expr, target: $target:expr) => {
-        $crate::log!(ERROR, $message, target: $target)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Error,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![],
+        })
     };
     ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::log!(ERROR, $message, $($key => $value),+)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Error,
+            message: $message.to_string(),
+            target: None,
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
     };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::log!(ERROR, $message, target: $target, $($key => $value),+)
+        $crate::telemetry::log($crate::LogContext {
+            level: $crate::LogLevel::Error,
+            message: $message.to_string(),
+            target: Some($target.to_string()),
+            attributes: vec![
+                $(($key.to_string(), $value.into())),+
+            ],
+        })
     };
 }

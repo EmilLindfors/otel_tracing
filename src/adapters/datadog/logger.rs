@@ -2,6 +2,10 @@ use async_trait::async_trait;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::LogExporter;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
+use tracing::debug;
+use tracing::error;
+use tracing::warn;
+use tracing::Level;
 use std::sync::Mutex;
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
@@ -10,6 +14,7 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 use crate::domain::telemetry::{get_resource, AttributeValue, LogContext, TelemetryError};
 use crate::ports::logger::LoggerPort;
+use crate::LogLevel;
 
 pub struct DatadogLogger {
     logger_provider: Mutex<Option<SdkLoggerProvider>>,
@@ -19,6 +24,18 @@ impl DatadogLogger {
     pub fn new() -> Self {
         Self {
             logger_provider: Mutex::new(None),
+        }
+    }
+
+    // Convert LogLevel to tracing::Level
+    fn to_tracing_level(level: LogLevel) -> Level {
+        match level {
+            LogLevel::Debug => Level::DEBUG,
+            LogLevel::Info => Level::INFO,
+            LogLevel::Warn => Level::WARN,
+            LogLevel::Error => Level::ERROR,
+            LogLevel::Critical => Level::ERROR,
+            LogLevel::Trace => Level::TRACE,
         }
     }
 }
@@ -73,27 +90,92 @@ impl LoggerPort for DatadogLogger {
     }
 
     fn log(&self, context: LogContext) {
-        let target = context
-            .target
-            .unwrap_or_else(|| "default-target".to_string());
-
-        // Convert attributes to a format usable with structured logging
-        let attributes: Vec<(&str, String)> = context
-            .attributes
-            .iter()
-            .map(|(k, v)| {
-                let value = match v {
-                    AttributeValue::String(s) => s.clone(),
-                    AttributeValue::Int(i) => i.to_string(),
-                    AttributeValue::Float(f) => f.to_string(),
-                    AttributeValue::Bool(b) => b.to_string(),
-                };
-                (k.as_str(), value)
-            })
-            .collect();
-
-        // Use tracing to log the message
-        info!(target, message = context.message.as_str(), ?attributes);
+        let target = context.target.as_deref().unwrap_or("app");
+        let level = Self::to_tracing_level(context.level);
+        
+        // Create a tracing event with the appropriate level
+        match level {
+            Level::ERROR => {
+                if context.attributes.is_empty() {
+                    error!(target, "{}", context.message);
+                } else {
+                    let fields = context.attributes.iter()
+                        .map(|(k, v)| {
+                            format!("{}={}", k, match v {
+                                AttributeValue::String(s) => s.clone(),
+                                AttributeValue::Int(i) => i.to_string(),
+                                AttributeValue::Float(f) => f.to_string(),
+                                AttributeValue::Bool(b) => b.to_string(),
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    
+                    error!(target, "{} [{}]", context.message, fields);
+                }
+            },
+            Level::WARN => {
+                if context.attributes.is_empty() {
+                    warn!(target, "{}", context.message);
+                } else {
+                    let fields = context.attributes.iter()
+                        .map(|(k, v)| {
+                            format!("{}={}", k, match v {
+                                AttributeValue::String(s) => s.clone(),
+                                AttributeValue::Int(i) => i.to_string(),
+                                AttributeValue::Float(f) => f.to_string(),
+                                AttributeValue::Bool(b) => b.to_string(),
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    
+                    warn!(target, "{} [{}]", context.message, fields);
+                }
+            },
+            Level::INFO => {
+                if context.attributes.is_empty() {
+                    info!(target, "{}", context.message);
+                } else {
+                    let fields = context.attributes.iter()
+                        .map(|(k, v)| {
+                            format!("{}={}", k, match v {
+                                AttributeValue::String(s) => s.clone(),
+                                AttributeValue::Int(i) => i.to_string(),
+                                AttributeValue::Float(f) => f.to_string(),
+                                AttributeValue::Bool(b) => b.to_string(),
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    
+                    info!(target, "{} [{}]", context.message, fields);
+                }
+            },
+            Level::DEBUG => {
+                if context.attributes.is_empty() {
+                    debug!(target, "{}", context.message);
+                } else {
+                    let fields = context.attributes.iter()
+                        .map(|(k, v)| {
+                            format!("{}={}", k, match v {
+                                AttributeValue::String(s) => s.clone(),
+                                AttributeValue::Int(i) => i.to_string(),
+                                AttributeValue::Float(f) => f.to_string(),
+                                AttributeValue::Bool(b) => b.to_string(),
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    
+                    debug!(target, "{} [{}]", context.message, fields);
+                }
+            },
+            _ => { 
+                // Use info for any other level
+                info!(target, "{}", context.message);
+            }
+        }
     }
 
     async fn shutdown(&self) -> Result<(), TelemetryError> {

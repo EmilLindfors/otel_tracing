@@ -46,15 +46,34 @@ pub enum AttributeValue {
     Bool(bool),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Log level for log events
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogLevel {
+    /// Very detailed logs, potentially of all levels.
     Trace,
+    /// Detailed information, typically of interest only when diagnosing problems.
     Debug,
+    
+    /// Confirmation that things are working as expected.
     Info,
+    
+    /// An indication that something unexpected happened, or indicative of some problem.
+    /// The software is still working as expected.
     Warn,
+    
+    /// Due to a more serious problem, the software has not been able to perform some function.
     Error,
-    Critical,
+
+    /// A serious error that requires immediate attention.
+    Critical
 }
+
+impl Default for LogLevel {
+    fn default() -> Self {
+        Self::Info
+    }
+}
+
 
 #[derive(Debug, Clone)]
 pub struct MetricContext {
