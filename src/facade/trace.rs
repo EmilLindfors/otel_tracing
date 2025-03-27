@@ -1,5 +1,5 @@
 use crate::domain::telemetry::{SpanContext, AttributeValue};
-use crate::ports::tracer::Span;
+pub use crate::ports::tracer::Span;
 use super::service;
 
 /// Create a new span.
