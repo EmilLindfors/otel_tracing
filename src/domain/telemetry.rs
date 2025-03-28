@@ -11,6 +11,8 @@ use opentelemetry_sdk::resource::{
 };
 use opentelemetry_sdk::Resource;
 
+use super::metrics::MetricUnit;
+
 #[derive(Debug)]
 pub enum TelemetryError {
     TracerInitError(String),
@@ -79,7 +81,7 @@ impl Default for LogLevel {
 pub struct MetricContext {
     pub name: String,
     pub description: Option<String>,
-    pub unit: Option<String>,
+    pub unit: MetricUnit,
     pub attributes: Vec<(String, AttributeValue)>,
 }
 
@@ -106,6 +108,12 @@ impl From<String> for AttributeValue {
 impl From<i64> for AttributeValue {
     fn from(value: i64) -> Self {
         Self::Int(value)
+    }
+}
+
+impl From<usize> for AttributeValue {
+    fn from(value: usize) -> Self {
+        Self::Int(value as i64)
     }
 }
 
@@ -156,6 +164,13 @@ pub fn get_resource() -> Resource {
                 .with_detector(Box::new(SdkProvidedResourceDetector))
                 .with_detector(Box::new(EnvResourceDetector::new()))
                 .with_detector(Box::new(TelemetryResourceDetector))
+                .with_service_name(std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "unknown".to_string()))
+                .with_attribute(
+                   KeyValue::new("service.version", std::env::var("OTEL_SERVICE_VERSION").unwrap_or_else(|_| "unknown".to_string()))
+                )
+                .with_attribute(
+                    KeyValue::new("deployment.environment", std::env::var("OTEL_DEPLOYMENT_ENVIRONMENT").unwrap_or_else(|_| "unknown".to_string()))
+                )
                 .build()
         })
         .clone()

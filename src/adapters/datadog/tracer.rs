@@ -2,10 +2,14 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use async_trait::async_trait;
 use opentelemetry::global;
+use opentelemetry::trace::SpanKind;
 use opentelemetry::trace::{Tracer as OtelTracer, Span as OtelSpan, TraceContextExt};
+use opentelemetry::Context;
 use opentelemetry::KeyValue;
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use opentelemetry_otlp::SpanExporter;
+use tracing::debug;
+use tracing::info;
 
 use crate::domain::telemetry::{SpanContext, AttributeValue, TelemetryError, get_resource, to_key_value};
 use crate::ports::tracer::{TracerPort, Span};
@@ -25,6 +29,7 @@ impl DatadogTracer {
 #[async_trait]
 impl TracerPort for DatadogTracer {
     async fn init(&self) -> Result<(), TelemetryError> {
+        info!("Initializing DatadogTracer");
         let resource = get_resource();
             
         let exporter = SpanExporter::builder()
@@ -43,6 +48,8 @@ impl TracerPort for DatadogTracer {
         // Store provider for shutdown
         let mut provider = self.tracer_provider.lock().unwrap();
         *provider = Some(tracer_provider);
+
+        info!("DatadogTracer initialized successfully");
         
         Ok(())
     }
@@ -53,17 +60,35 @@ impl TracerPort for DatadogTracer {
         let attributes: Vec<KeyValue> = context.attributes.iter()
             .map(|(k, v)| to_key_value(k.clone(), v))
             .collect();
-            
-        // Create a span builder, start the span, and store it in a context
-        let span_builder = tracer.span_builder(context.name)
+
+        // Get the current context - will contain parent span if one exists
+        let current_ctx = Context::current();
+        
+        if current_ctx.span().span_context().is_valid() {
+            debug!("Creating child span with parent: {:?}", current_ctx.span().span_context().trace_id());
+        } else {
+            debug!("Creating root span (no parent)");
+        }
+        
+        // Create a span builder
+        let span_builder = tracer.span_builder(context.name.clone())
+            .with_kind(SpanKind::Internal)
             .with_attributes(attributes);
+            
+        // Start the span within the current context (preserving parent relationship)
+        let span = tracer.build_with_context(span_builder, &current_ctx);
         
-        let cx = opentelemetry::Context::current_with_span(span_builder.start(&tracer));
+        // Create a new context with this span
+        let cx = current_ctx.with_span(span);
         
-        Box::new(DatadogSpan { ctx: cx })
+        Box::new(DatadogSpan { 
+            ctx: cx,
+            name: context.name,
+        })
     }
     
     async fn shutdown(&self) -> Result<(), TelemetryError> {
+        info!("Shutting down DatadogTracer");
         let mut provider = self.tracer_provider.lock().unwrap();
         if let Some(provider) = provider.take() {
             provider.shutdown()
@@ -75,9 +100,10 @@ impl TracerPort for DatadogTracer {
 }
 
 struct DatadogSpan {
-    // Store the concrete span implementation
-    // We'll use opentelemetry::trace::TraceContextExt trait to interact with it
-    ctx: opentelemetry::Context,
+    // The context containing the span
+    ctx: Context,
+    // Store span name for debugging
+    name: String,
 }
 
 impl Span for DatadogSpan {
@@ -103,5 +129,9 @@ impl Span for DatadogSpan {
     
     fn end(&self) {
         self.ctx.span().end();
+    }
+
+    fn get_context(&self) -> Context {
+        self.ctx.clone()
     }
 }

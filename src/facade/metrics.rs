@@ -2,6 +2,7 @@
 //! 
 //! This module provides functions for creating and updating metrics.
 
+use crate::domain::metrics::MetricUnit;
 use crate::domain::telemetry::{MetricContext, AttributeValue};
 use crate::ports::metrics::{Counter, Gauge, Histogram};
 use super::service;
@@ -26,13 +27,13 @@ pub fn create_histogram(context: MetricContext) -> Box<dyn Histogram> {
 pub fn create_counter_with_attributes(
     name: &str, 
     description: Option<&str>, 
-    unit: Option<&str>, 
+    unit: MetricUnit, 
     attributes: Vec<(String, AttributeValue)>
 ) -> Box<dyn Counter> {
     create_counter(MetricContext {
         name: name.to_string(),
         description: description.map(|s| s.to_string()),
-        unit: unit.map(|s| s.to_string()),
+        unit,
         attributes,
     })
 }
@@ -42,13 +43,13 @@ pub fn create_counter_with_attributes(
 pub fn create_gauge_with_attributes(
     name: &str, 
     description: Option<&str>, 
-    unit: Option<&str>, 
+    unit: MetricUnit, 
     attributes: Vec<(String, AttributeValue)>
 ) -> Box<dyn Gauge> {
     create_gauge(MetricContext {
         name: name.to_string(),
         description: description.map(|s| s.to_string()),
-        unit: unit.map(|s| s.to_string()),
+        unit,
         attributes,
     })
 }
@@ -58,13 +59,13 @@ pub fn create_gauge_with_attributes(
 pub fn create_histogram_with_attributes(
     name: &str, 
     description: Option<&str>, 
-    unit: Option<&str>, 
+    unit: MetricUnit, 
     attributes: Vec<(String, AttributeValue)>
 ) -> Box<dyn Histogram> {
     create_histogram(MetricContext {
         name: name.to_string(),
         description: description.map(|s| s.to_string()),
-        unit: unit.map(|s| s.to_string()),
+        unit,
         attributes,
     })
 }

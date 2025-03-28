@@ -100,18 +100,20 @@ macro_rules! with_span {
 /// ```
 #[macro_export]
 macro_rules! with_async_span {
+    // Case 1: No attributes, just name and code (unchanged)
     ($name:expr, $code:expr) => {
         $crate::telemetry::with_async_span($name, vec![], $code)
     };
-    ($name:expr, $($key:expr => $value:expr),+, $code:expr) => {
+    
+    // Case 2: With attributes in tuple array syntax
+    ($name:expr, [$(($key:expr, $value:expr)),* $(,)*], $code:expr) => {
         $crate::telemetry::with_async_span(
             $name,
-            vec![$(($key.to_string(), $value.into())),+],
+            vec![$(($key.to_string(), $value.into())),*],
             $code
         )
     };
 }
-
 
 /// Create a counter metric.
 /// 
@@ -137,11 +139,11 @@ macro_rules! with_async_span {
 /// ```
 #[macro_export]
 macro_rules! counter {
-    ($name:expr) => {
+    ($name:expr, $unit:expr) => {
         $crate::telemetry::create_counter($crate::MetricContext {
             name: $name.to_string(),
             description: None,
-            unit: None,
+            unit: $unit,
             attributes: vec![],
         })
     };
@@ -149,7 +151,7 @@ macro_rules! counter {
         $crate::telemetry::create_counter($crate::MetricContext {
             name: $name.to_string(),
             description: Some($description.to_string()),
-            unit: Some($unit.to_string()),
+            unit: $unit,
             attributes: vec![],
         })
     };
@@ -157,7 +159,7 @@ macro_rules! counter {
         $crate::telemetry::create_counter($crate::MetricContext {
             name: $name.to_string(),
             description: Some($description.to_string()),
-            unit: Some($unit.to_string()),
+            unit: $unit,
             attributes: vec![
                 $(($key.to_string(), $value.into())),+
             ],
@@ -189,11 +191,11 @@ macro_rules! counter {
 /// ```
 #[macro_export]
 macro_rules! gauge {
-    ($name:expr) => {
+    ($name:expr, $unit:expr) => {
         $crate::telemetry::create_gauge($crate::MetricContext {
             name: $name.to_string(),
             description: None,
-            unit: None,
+            unit: $unit,
             attributes: vec![],
         })
     };
@@ -201,7 +203,7 @@ macro_rules! gauge {
         $crate::telemetry::create_gauge($crate::MetricContext {
             name: $name.to_string(),
             description: Some($description.to_string()),
-            unit: Some($unit.to_string()),
+            unit: $unit,
             attributes: vec![],
         })
     };
@@ -209,7 +211,7 @@ macro_rules! gauge {
         $crate::telemetry::create_gauge($crate::MetricContext {
             name: $name.to_string(),
             description: Some($description.to_string()),
-            unit: Some($unit.to_string()),
+            unit: $unit,
             attributes: vec![
                 $(($key.to_string(), $value.into())),+
             ],
@@ -242,11 +244,11 @@ macro_rules! gauge {
 /// ```
 #[macro_export]
 macro_rules! histogram {
-    ($name:expr) => {
+    ($name:expr, $unit:expr) => {
         $crate::telemetry::create_histogram($crate::MetricContext {
             name: $name.to_string(),
             description: None,
-            unit: None,
+            unit: $unit,
             attributes: vec![],
         })
     };
@@ -254,7 +256,7 @@ macro_rules! histogram {
         $crate::telemetry::create_histogram($crate::MetricContext {
             name: $name.to_string(),
             description: Some($description.to_string()),
-            unit: Some($unit.to_string()),
+            unit: $unit,
             attributes: vec![],
         })
     };
@@ -262,7 +264,7 @@ macro_rules! histogram {
         $crate::telemetry::create_histogram($crate::MetricContext {
             name: $name.to_string(),
             description: Some($description.to_string()),
-            unit: Some($unit.to_string()),
+            unit: $unit,
             attributes: vec![
                 $(($key.to_string(), $value.into())),+
             ],

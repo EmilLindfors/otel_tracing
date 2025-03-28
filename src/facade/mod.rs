@@ -11,6 +11,7 @@ use std::sync::{Arc, OnceLock};
 
 use crate::domain::telemetry::TelemetryError;
 use crate::services::telemetry::TelemetryService;
+pub use crate::domain::metrics::*;
 
 // Re-export all public functions from sub-modules
 pub use log::*;
