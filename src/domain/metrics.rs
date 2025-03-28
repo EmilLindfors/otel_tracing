@@ -58,6 +58,13 @@ impl MetricUnit {
 
     pub fn from_str(s: &str) -> Self {
         match s {
+            // bytes units
+            "bit" => Self::Bytes(BytesUnit::Bit),
+            "byte" => Self::Bytes(BytesUnit::Byte),
+            "kilobyte" => Self::Bytes(BytesUnit::KiloByte),
+            "megabyte" => Self::Bytes(BytesUnit::MegaByte),
+            "gigabyte" => Self::Bytes(BytesUnit::GigaByte),
+            "terabyte" => Self::Bytes(BytesUnit::TeraByte),
             // Time units
             "ns" => Self::Time(TimeUnit::Nanosecond),
             "μs" => Self::Time(TimeUnit::Microsecond),
@@ -233,12 +240,12 @@ impl fmt::Display for MetricUnit {
 pub enum BytesUnit {
     Bit,
     Byte,
-    KibiByte,
-    MebiByte,
-    GibiByte,
-    TebiByte,
-    PebiByte,
-    ExbiByte,
+    KiloByte,
+    MegaByte,
+    GigaByte,
+    TeraByte,
+    PetaByte,
+    ExaByte,
 }
 
 impl BytesUnit {
@@ -246,12 +253,12 @@ impl BytesUnit {
         match self {
             Self::Bit => "bit",
             Self::Byte => "byte",
-            Self::KibiByte => "kibibyte",
-            Self::MebiByte => "mebibyte",
-            Self::GibiByte => "gibibyte",
-            Self::TebiByte => "tebibyte",
-            Self::PebiByte => "pebibyte",
-            Self::ExbiByte => "exbibyte",
+            Self::KiloByte => "kilobyte",
+            Self::MegaByte => "megabyte",
+            Self::GigaByte => "gigabyte",
+            Self::TeraByte => "terabyte",
+            Self::PetaByte => "petabyte",
+            Self::ExaByte => "exabyte",
         }
     }
 }
@@ -779,13 +786,13 @@ pub mod units {
         MetricUnit::Bytes(BytesUnit::Byte)
     }
     pub fn kib() -> MetricUnit {
-        MetricUnit::Bytes(BytesUnit::KibiByte)
+        MetricUnit::Bytes(BytesUnit::KiloByte)
     }
     pub fn mib() -> MetricUnit {
-        MetricUnit::Bytes(BytesUnit::MebiByte)
+        MetricUnit::Bytes(BytesUnit::MegaByte)
     }
     pub fn gib() -> MetricUnit {
-        MetricUnit::Bytes(BytesUnit::GibiByte)
+        MetricUnit::Bytes(BytesUnit::GigaByte)
     }
 
     // Time-related helper functions
