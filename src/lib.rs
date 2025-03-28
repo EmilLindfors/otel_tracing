@@ -3,9 +3,22 @@ mod ports;
 mod adapters;
 mod services;
 pub mod facade;
-
+use opentelemetry::{context::FutureExt, Context};
 pub use facade as telemetry;
 pub use domain::telemetry::{SpanContext, MetricContext, LogContext, AttributeValue, TelemetryError, LogLevel};
+
+
+pub fn spawn_with_context<F, R>(future: F) -> tokio::task::JoinHandle<R>
+where
+    F: std::future::Future<Output = R> + Send + 'static,
+    R: Send + 'static,
+{
+    // Capture the current context before spawning
+    let parent_context = Context::current();
+
+    // Use opentelemetry_futures to propagate context without a guard
+    tokio::spawn(future.with_context(parent_context))
+}
 
 /// Create a span for tracing operations.
 /// 
