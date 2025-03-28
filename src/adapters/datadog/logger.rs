@@ -1,20 +1,21 @@
+use crate::domain::telemetry::{get_resource, AttributeValue, LogContext, TelemetryError};
+use crate::ports::logger::LoggerPort;
+use crate::LogLevel;
 use async_trait::async_trait;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::LogExporter;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
+use std::sync::Mutex;
+use std::time::SystemTime;
 use tracing::debug;
 use tracing::error;
+use tracing::info;
 use tracing::warn;
 use tracing::Level;
-use std::sync::Mutex;
-use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
-use crate::domain::telemetry::{get_resource, AttributeValue, LogContext, TelemetryError};
-use crate::ports::logger::LoggerPort;
-use crate::LogLevel;
 
 pub struct DatadogLogger {
     logger_provider: Mutex<Option<SdkLoggerProvider>>,
@@ -38,6 +39,8 @@ impl DatadogLogger {
             LogLevel::Trace => Level::TRACE,
         }
     }
+
+    
 }
 
 #[async_trait]
@@ -89,91 +92,134 @@ impl LoggerPort for DatadogLogger {
         Ok(())
     }
 
+    
+
     fn log(&self, context: LogContext) {
         let target = context.target.as_deref().unwrap_or("app");
         let level = Self::to_tracing_level(context.level);
-        
+
+        // Extract timestamp if available
+        let timestamp = context
+            .timestamp
+            .map(|ts| {
+                // Convert nanoseconds to seconds and fractional part for readability
+                let seconds = ts / 1_000_000_000;
+                let nanos = ts % 1_000_000_000;
+                format!("{}.{:09}", seconds, nanos)
+            })
+            .unwrap_or(
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs_f64()
+                    .to_string(),
+            );
+
         // Create a tracing event with the appropriate level
         match level {
             Level::ERROR => {
                 if context.attributes.is_empty() {
                     error!(target, "{}", context.message);
                 } else {
-                    let fields = context.attributes.iter()
+                    let fields = context
+                        .attributes
+                        .iter()
                         .map(|(k, v)| {
-                            format!("{}={}", k, match v {
-                                AttributeValue::String(s) => s.clone(),
-                                AttributeValue::Int(i) => i.to_string(),
-                                AttributeValue::Float(f) => f.to_string(),
-                                AttributeValue::Bool(b) => b.to_string(),
-                            })
+                            format!(
+                                "{}={}",
+                                k,
+                                match v {
+                                    AttributeValue::String(s) => s.clone(),
+                                    AttributeValue::Int(i) => i.to_string(),
+                                    AttributeValue::Float(f) => f.to_string(),
+                                    AttributeValue::Bool(b) => b.to_string(),
+                                }
+                            )
                         })
                         .collect::<Vec<_>>()
                         .join(", ");
-                    
-                    error!(target, "{} [{}]", context.message, fields);
+
+                    error!(target, timestamp, "{} [{}]", context.message, fields);
                 }
-            },
+            }
             Level::WARN => {
                 if context.attributes.is_empty() {
                     warn!(target, "{}", context.message);
                 } else {
-                    let fields = context.attributes.iter()
+                    let fields = context
+                        .attributes
+                        .iter()
                         .map(|(k, v)| {
-                            format!("{}={}", k, match v {
-                                AttributeValue::String(s) => s.clone(),
-                                AttributeValue::Int(i) => i.to_string(),
-                                AttributeValue::Float(f) => f.to_string(),
-                                AttributeValue::Bool(b) => b.to_string(),
-                            })
+                            format!(
+                                "{}={}",
+                                k,
+                                match v {
+                                    AttributeValue::String(s) => s.clone(),
+                                    AttributeValue::Int(i) => i.to_string(),
+                                    AttributeValue::Float(f) => f.to_string(),
+                                    AttributeValue::Bool(b) => b.to_string(),
+                                }
+                            )
                         })
                         .collect::<Vec<_>>()
                         .join(", ");
-                    
-                    warn!(target, "{} [{}]", context.message, fields);
+
+                    warn!(target, timestamp, "{} [{}]", context.message, fields);
                 }
-            },
+            }
             Level::INFO => {
                 if context.attributes.is_empty() {
                     info!(target, "{}", context.message);
                 } else {
-                    let fields = context.attributes.iter()
+                    let fields = context
+                        .attributes
+                        .iter()
                         .map(|(k, v)| {
-                            format!("{}={}", k, match v {
-                                AttributeValue::String(s) => s.clone(),
-                                AttributeValue::Int(i) => i.to_string(),
-                                AttributeValue::Float(f) => f.to_string(),
-                                AttributeValue::Bool(b) => b.to_string(),
-                            })
+                            format!(
+                                "{}={}",
+                                k,
+                                match v {
+                                    AttributeValue::String(s) => s.clone(),
+                                    AttributeValue::Int(i) => i.to_string(),
+                                    AttributeValue::Float(f) => f.to_string(),
+                                    AttributeValue::Bool(b) => b.to_string(),
+                                }
+                            )
                         })
                         .collect::<Vec<_>>()
                         .join(", ");
-                    
-                    info!(target, "{} [{}]", context.message, fields);
+
+                    info!(target, timestamp, "{} [{}]", context.message, fields);
                 }
-            },
+            }
             Level::DEBUG => {
                 if context.attributes.is_empty() {
                     debug!(target, "{}", context.message);
                 } else {
-                    let fields = context.attributes.iter()
+                    let fields = context
+                        .attributes
+                        .iter()
                         .map(|(k, v)| {
-                            format!("{}={}", k, match v {
-                                AttributeValue::String(s) => s.clone(),
-                                AttributeValue::Int(i) => i.to_string(),
-                                AttributeValue::Float(f) => f.to_string(),
-                                AttributeValue::Bool(b) => b.to_string(),
-                            })
+                            format!(
+                                "{}={}",
+                                k,
+                                match v {
+                                    AttributeValue::String(s) => s.clone(),
+                                    AttributeValue::Int(i) => i.to_string(),
+                                    AttributeValue::Float(f) => f.to_string(),
+                                    AttributeValue::Bool(b) => b.to_string(),
+                                }
+                            )
                         })
                         .collect::<Vec<_>>()
                         .join(", ");
-                    
-                    debug!(target, "{} [{}]", context.message, fields);
+
+                    debug!(target, timestamp, "{} [{}]", context.message, fields);
                 }
-            },
-            _ => { 
+            }
+            _ => {
                 // Use info for any other level
-                info!(target, "{}", context.message);
+                info!(target, timestamp, "{}", context.message);
             }
         }
     }

@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 use std::sync::OnceLock;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use opentelemetry::KeyValue;
 use opentelemetry_resource_detectors::{
@@ -88,9 +90,40 @@ pub struct MetricContext {
 #[derive(Debug, Clone)]
 pub struct LogContext {
     pub level: LogLevel,
+    pub timestamp: Option<u128>,
     pub message: String,
     pub target: Option<String>,
-    pub attributes: Vec<(String, AttributeValue)>,
+    pub attributes: HashMap<String, AttributeValue>,
+}
+
+impl LogContext {
+    pub fn new(message: String, level: LogLevel) -> Self {
+        Self {
+            message,
+            level,
+            target: None,
+            attributes: HashMap::new(),
+            timestamp: Some(SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_nanos()),
+        }
+    }
+    
+    pub fn with_target(mut self, target: &str) -> Self {
+        self.target = Some(target.to_string());
+        self
+    }
+    
+    pub fn with_attribute(mut self, key: &str, value: AttributeValue) -> Self {
+        self.attributes.insert(key.to_string(), value);
+        self
+    }
+    
+    pub fn with_timestamp(mut self, timestamp: u128) -> Self {
+        self.timestamp = Some(timestamp);
+        self
+    }
 }
 
 impl From<&str> for AttributeValue {

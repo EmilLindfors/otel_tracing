@@ -1,12 +1,14 @@
-mod domain;
-mod ports;
 mod adapters;
-mod services;
+mod domain;
 pub mod facade;
-use opentelemetry::{context::FutureExt, Context};
+mod ports;
+mod services;
+pub use domain::telemetry::{
+    AttributeValue, LogContext, LogLevel, MetricContext, SpanContext, TelemetryError,
+};
 pub use facade as telemetry;
-pub use domain::telemetry::{SpanContext, MetricContext, LogContext, AttributeValue, TelemetryError, LogLevel};
-
+use opentelemetry::{context::FutureExt, Context};
+use std::collections::HashMap;
 
 pub fn spawn_with_context<F, R>(future: F) -> tokio::task::JoinHandle<R>
 where
@@ -21,19 +23,19 @@ where
 }
 
 /// Create a span for tracing operations.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple span with just a name
 /// let span = span!("process_request");
-/// 
+///
 /// // Span with attributes
-/// let span = span!("process_request", 
+/// let span = span!("process_request",
 ///     "user_id" => "12345",
 ///     "request_id" => "abc-123"
 /// );
-/// 
+///
 /// // Remember to end the span when the operation is complete
 /// span.end();
 /// ```
@@ -56,18 +58,18 @@ macro_rules! span {
 }
 
 /// Execute code within a span scope, automatically ending the span when done.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple span with just a name
 /// let result = with_span!("calculate_result", {
 ///     // Code to execute within the span
 ///     calculate_something(42)
 /// });
-/// 
+///
 /// // Span with attributes
-/// let result = with_span!("process_request", 
+/// let result = with_span!("process_request",
 ///     "user_id" => "12345",
 ///     "request_id" => "abc-123",
 ///     {
@@ -91,18 +93,18 @@ macro_rules! with_span {
 }
 
 /// Execute async code within a span scope, automatically ending the span when done.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple span with just a name
 /// let result = with_async_span!("fetch_data", async {
 ///     // Async code to execute within the span
 ///     fetch_data().await
 /// }).await;
-/// 
+///
 /// // Span with attributes
-/// let result = with_async_span!("process_request", 
+/// let result = with_async_span!("process_request",
 ///     "user_id" => "12345",
 ///     "request_id" => "abc-123",
 ///     async {
@@ -117,7 +119,7 @@ macro_rules! with_async_span {
     ($name:expr, $code:expr) => {
         $crate::telemetry::with_async_span($name, vec![], $code)
     };
-    
+
     // Case 2: With attributes in tuple array syntax
     ($name:expr, [$(($key:expr, $value:expr)),* $(,)*], $code:expr) => {
         $crate::telemetry::with_async_span(
@@ -129,16 +131,16 @@ macro_rules! with_async_span {
 }
 
 /// Create a counter metric.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple counter with just a name
 /// let counter = counter!("requests_processed");
-/// 
+///
 /// // Counter with description and unit
 /// let counter = counter!("requests_processed", "Number of requests processed", "requests");
-/// 
+///
 /// // Counter with attributes
 /// let counter = counter!("requests_processed",
 ///     "Number of requests processed",
@@ -146,7 +148,7 @@ macro_rules! with_async_span {
 ///     "service" => "api",
 ///     "status" => "200"
 /// );
-/// 
+///
 /// // Increment the counter
 /// counter.inc();
 /// ```
@@ -180,16 +182,16 @@ macro_rules! counter {
 }
 
 /// Create a gauge metric.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple gauge with just a name
 /// let gauge = gauge!("cpu_usage");
-/// 
+///
 /// // Gauge with description and unit
 /// let gauge = gauge!("cpu_usage", "CPU usage percentage", "percent");
-/// 
+///
 /// // Gauge with attributes
 /// let gauge = gauge!("cpu_usage",
 ///    "CPU usage percentage",
@@ -197,7 +199,7 @@ macro_rules! counter {
 ///   "service" => "api",
 ///  "status" => "200"
 /// );
-/// 
+///
 /// // Set the gauge value
 /// gauge.set(42.0);
 /// ```
@@ -231,18 +233,17 @@ macro_rules! gauge {
     };
 }
 
-
 /// Create a histogram metric.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple histogram with just a name
 /// let histogram = histogram!("request_duration");
-/// 
+///
 /// // Histogram with description and unit
 /// let histogram = histogram!("request_duration", "Duration of requests", "milliseconds");
-/// 
+///
 /// // Histogram with attributes
 /// let histogram = histogram!("request_duration",
 ///    "Duration of requests",
@@ -250,7 +251,7 @@ macro_rules! gauge {
 /// "service" => "api",
 /// "status" => "200"
 /// );
-/// 
+///
 /// // Record a value in the histogram
 /// histogram.record(42.0);
 /// ```
@@ -285,22 +286,22 @@ macro_rules! histogram {
 }
 
 /// Log a message with a specific log level.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple log message with INFO level (default)
 /// log!("Processing request");
-/// 
+///
 /// // Log message with specific level
 /// log!(ERROR, "Failed to process request");
-/// 
+///
 /// // Log message with level and target
 /// log!(WARN, "Processing request", target: "app::process_request");
-/// 
+///
 /// // Log message with level and attributes
 /// log!(INFO, "Processing request", "user_id" => "12345", "request_id" => "abc-123");
-/// 
+///
 /// // Log message with level, target and attributes
 /// log!(DEBUG, "Processing request", target: "app::process_request", "user_id" => "12345", "request_id" => "abc-123");
 /// ```
@@ -345,16 +346,16 @@ macro_rules! log {
 }
 
 /// Log a message at DEBUG level.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple debug message
 /// debug!("Processing request details");
-/// 
+///
 /// // With target
 /// debug!("Processing request details", target: "app::process_request");
-/// 
+///
 /// // With attributes
 /// debug!("Processing request details", "user_id" => "12345", "request_id" => "abc-123");
 /// ```
@@ -398,70 +399,50 @@ macro_rules! debug_log {
     };
 }
 /// Log a message at INFO level.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple info message
 /// info!("Request processed successfully");
-/// 
+///
 /// // With target
 /// info!("Request processed successfully", target: "app::process_request");
-/// 
+///
 /// // With attributes
 /// info!("Request processed successfully", "user_id" => "12345", "request_id" => "abc-123");
 /// ```
 #[macro_export]
 macro_rules! info_log {
     ($message:expr) => {
-        $crate::telemetry::log($crate::LogContext {
-            level: $crate::LogLevel::Info,
-            message: $message.to_string(),
-            target: None,
-            attributes: vec![],
-        })
+        $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Info))
     };
     ($message:expr, target: $target:expr) => {
-        $crate::telemetry::log($crate::LogContext {
-            level: $crate::LogLevel::Info,
-            message: $message.to_string(),
-            target: Some($target.to_string()),
-            attributes: vec![],
-        })
+        $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Info)
+            .with_target($target))
     };
     ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::telemetry::log($crate::LogContext {
-            level: $crate::LogLevel::Info,
-            message: $message.to_string(),
-            target: None,
-            attributes: vec![
-                $(($key.to_string(), $value.into())),+
-            ],
-        })
+        $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Info)
+            $(.with_attribute($key, $value.into()))+)
     };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::telemetry::log($crate::LogContext {
-            level: $crate::LogLevel::Info,
-            message: $message.to_string(),
-            target: Some($target.to_string()),
-            attributes: vec![
-                $(($key.to_string(), $value.into())),+
-            ],
-        })
+        $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Info)
+            .with_target($target)
+            $(.with_attribute($key, $value.into()))+)
     };
 }
 
 /// Log a message at WARN level.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple warning message
 /// warn!("Resource usage high");
-/// 
+///
 /// // With target
 /// warn!("Resource usage high", target: "app::resource_monitor");
-/// 
+///
 /// // With attributes
 /// warn!("Resource usage high", "cpu" => "85%", "memory" => "90%");
 /// ```
@@ -505,18 +486,17 @@ macro_rules! warn_log {
     };
 }
 
-
 /// Log a message at ERROR level.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// // Simple error message
 /// error!("Failed to process request");
-/// 
+///
 /// // With target
 /// error!("Failed to process request", target: "app::process_request");
-/// 
+///
 /// // With attributes
 /// error!("Failed to process request", "user_id" => "12345", "error_code" => "500");
 /// ```

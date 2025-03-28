@@ -2,6 +2,8 @@
 //! 
 //! This module provides functions for structured logging.
 
+use std::collections::HashMap;
+
 use crate::{domain::telemetry::LogContext, AttributeValue, LogLevel};
 use super::service;
 
@@ -18,9 +20,10 @@ pub fn debug(
 ) {
     log(LogContext {
         level: LogLevel::Debug,
+        timestamp: None,
         message: message.to_string(),
         target: target.map(|s| s.to_string()),
-        attributes,
+        attributes: HashMap::from_iter(attributes),
     })
 }
 
@@ -32,9 +35,10 @@ pub fn info(
 ) {
     log(LogContext {
         level: LogLevel::Info,
+        timestamp: None,
         message: message.to_string(),
         target: target.map(|s| s.to_string()),
-        attributes,
+        attributes: HashMap::from_iter(attributes),
     })
 }
 
@@ -45,10 +49,11 @@ pub fn warn(
     attributes: Vec<(String, AttributeValue)>
 ) {
     log(LogContext {
+        timestamp: None,
         level: LogLevel::Warn,
         message: message.to_string(),
         target: target.map(|s| s.to_string()),
-        attributes,
+        attributes: HashMap::from_iter(attributes),
     })
 }
 
@@ -60,8 +65,9 @@ pub fn error(
 ) {
     log(LogContext {
         level: LogLevel::Error,
+        timestamp: None,
         message: message.to_string(),
         target: target.map(|s| s.to_string()),
-        attributes,
+        attributes: HashMap::from_iter(attributes),
     })
 }
