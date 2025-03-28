@@ -81,7 +81,7 @@ impl Default for LogLevel {
 pub struct MetricContext {
     pub name: String,
     pub description: Option<String>,
-    pub unit: MetricUnit,
+    pub unit: Option<MetricUnit>,
     pub attributes: Vec<(String, AttributeValue)>,
 }
 

@@ -156,7 +156,11 @@ impl MetricsPort for DatadogMetrics {
             counter_builder
         };
 
-        let counter_builder = counter_builder.with_unit(context.unit.as_str().to_string());
+        let counter_builder = if let Some(unit) = context.unit {
+            counter_builder.with_unit(unit.as_str().to_string())
+        } else {
+            counter_builder
+        };
 
         let counter = counter_builder.build();
 
@@ -192,7 +196,11 @@ impl MetricsPort for DatadogMetrics {
             gauge_builder
         };
 
-        let gauge_builder = gauge_builder.with_unit(context.unit.as_str().to_string());
+        let gauge_builder = if let Some(unit) = context.unit {
+            gauge_builder.with_unit(unit.as_str().to_string())
+        } else {
+            gauge_builder
+        };
 
         let gauge = gauge_builder.build();
 
@@ -223,6 +231,8 @@ impl MetricsPort for DatadogMetrics {
         // Merge system tags with passed attributes
         let attributes = merge_with_system_tags(context.attributes);
 
+
+
         let histogram_builder = meter.f64_histogram(metric_name);
 
         let histogram_builder = if let Some(desc) = context.description {
@@ -231,7 +241,11 @@ impl MetricsPort for DatadogMetrics {
             histogram_builder
         };
 
-        let histogram_builder = histogram_builder.with_unit(context.unit.as_str().to_string());
+        let histogram_builder = if let Some(unit) = context.unit {
+            histogram_builder.with_unit(unit.as_str().to_string())
+        } else {
+            histogram_builder
+        };
 
         let histogram = histogram_builder.build();
 
