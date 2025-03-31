@@ -137,7 +137,6 @@ impl MetricsPort for DatadogMetrics {
     fn create_counter(&self, context: MetricContext) -> Box<dyn Counter> {
         // Apply Datadog naming conventions
         let metric_name = self.format_metric_name(&context.name);
-        println!("Creating counter: {} (from {})", metric_name, context.name);
 
         // Get meter from counter provider
         let meter = match self.counter_meter_provider.lock().unwrap().as_ref() {
@@ -217,10 +216,6 @@ impl MetricsPort for DatadogMetrics {
     fn create_histogram(&self, context: MetricContext) -> Box<dyn Histogram> {
         // Apply DataDog naming conventions
         let metric_name = self.format_metric_name(&context.name);
-        info!(
-            "Creating histogram: {} (from {})",
-            metric_name, context.name
-        );
 
         // Get meter from histogram provider
         let meter = match self.histogram_meter_provider.lock().unwrap().as_ref() {
@@ -301,10 +296,6 @@ impl Counter for DatadogCounter {
         let call_attributes = DatadogMetrics::convert_attributes(&attributes);
         combined_attributes.extend(call_attributes);
 
-        debug!(
-            "Adding {} to counter {}: {:?}",
-            value, self.name, attributes
-        );
         self.counter.add(value, &combined_attributes);
     }
 }
@@ -324,7 +315,6 @@ impl Gauge for DatadogGauge {
         let call_attributes = DatadogMetrics::convert_attributes(&attributes);
         combined_attributes.extend(call_attributes);
 
-        debug!("Setting gauge {} to {}: {:?}", self.name, value, attributes);
         self.gauge.record(value, &combined_attributes);
     }
 }
@@ -344,10 +334,6 @@ impl Histogram for DatadogHistogram {
         let call_attributes = DatadogMetrics::convert_attributes(&attributes);
         combined_attributes.extend(call_attributes);
 
-        debug!(
-            "Recording {} in histogram {}: {:?}",
-            value, self.name, attributes
-        );
         self.histogram.record(value, &combined_attributes);
     }
 }

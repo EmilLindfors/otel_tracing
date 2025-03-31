@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use tracing_subscriber::EnvFilter;
+
 use crate::domain::telemetry::{LogContext, MetricContext, SpanContext, TelemetryError};
 use crate::ports::logger::LoggerPort;
 use crate::ports::metrics::{Counter, Gauge, Histogram, MetricsPort};
@@ -27,9 +29,9 @@ impl TelemetryService {
     }
 
     /// Initialize all telemetry components
-    pub async fn init(&self) -> Result<(), TelemetryError> {
+    pub async fn init(&self, filter: Option<EnvFilter>) -> Result<(), TelemetryError> {
         // Initialize logger first, so we can capture logs from other initializations
-        self.logger.init().await?;
+        self.logger.init(filter).await?;
         self.tracer.init().await?;
         self.metrics.init().await?;
 

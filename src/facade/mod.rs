@@ -17,13 +17,14 @@ pub use crate::domain::metrics::*;
 pub use log::*;
 pub use metrics::*;
 pub use trace::*;
+use tracing_subscriber::EnvFilter;
 
 // Global instance of TelemetryService
 static TELEMETRY_SERVICE: OnceLock<Arc<TelemetryService>> = OnceLock::new();
 
 /// Initialize the global telemetry service.
 /// This must be called before any other telemetry functions.
-pub async fn init(service: TelemetryService) -> Result<(), TelemetryError> {
+pub async fn init(service: TelemetryService, filter: Option<EnvFilter>) -> Result<(), TelemetryError> {
     let service_arc = Arc::new(service);
 
     if TELEMETRY_SERVICE.set(service_arc.clone()).is_err() {
@@ -32,15 +33,15 @@ pub async fn init(service: TelemetryService) -> Result<(), TelemetryError> {
         ));
     }
 
-    service_arc.init().await
+    service_arc.init(filter).await
 }
 
 /// Initialize a DataDog-based telemetry service.
 /// This is a convenience function for common DataDog setup.
-pub async fn init_datadog() -> Result<(), TelemetryError> {
+pub async fn init_datadog(filter: Option<EnvFilter>) -> Result<(), TelemetryError> {
     let service = crate::services::telemetry::TelemetryServiceBuilder::build_datadog()?;
 
-    init(service).await
+    init(service, filter).await
 }
 
 /// Shutdown the global telemetry service.

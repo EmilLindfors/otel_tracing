@@ -39,13 +39,11 @@ impl DatadogLogger {
             LogLevel::Trace => Level::TRACE,
         }
     }
-
-    
 }
 
 #[async_trait]
 impl LoggerPort for DatadogLogger {
-    async fn init(&self) -> Result<(), TelemetryError> {
+    async fn init(&self, filter: Option<EnvFilter>) -> Result<(), TelemetryError> {
         let resource = get_resource();
 
         let exporter = LogExporter::builder()
@@ -62,12 +60,14 @@ impl LoggerPort for DatadogLogger {
         let otel_layer = OpenTelemetryTracingBridge::new(&logger_provider);
 
         // Create filter for OpenTelemetry layer
-        let filter_otel = EnvFilter::new("info")
-            .add_directive("hyper=off".parse().unwrap())
-            .add_directive("opentelemetry=off".parse().unwrap())
-            .add_directive("tonic=off".parse().unwrap())
-            .add_directive("h2=off".parse().unwrap())
-            .add_directive("reqwest=off".parse().unwrap());
+        let filter_otel = filter.unwrap_or_else(|| {
+            EnvFilter::new("info")
+                .add_directive("opentelemetry=debug".parse().unwrap())
+                .add_directive("hyper=off".parse().unwrap())
+                .add_directive("tonic=off".parse().unwrap())
+                .add_directive("h2=off".parse().unwrap())
+                .add_directive("reqwest=off".parse().unwrap())
+        });
 
         let otel_layer = otel_layer.with_filter(filter_otel);
 
@@ -92,28 +92,13 @@ impl LoggerPort for DatadogLogger {
         Ok(())
     }
 
-    
-
     fn log(&self, context: LogContext) {
         let target = context.target.as_deref().unwrap_or("app");
         let level = Self::to_tracing_level(context.level);
 
-        // Extract timestamp if available
-        let timestamp = context
-            .timestamp
-            .map(|ts| {
-                // Convert nanoseconds to seconds and fractional part for readability
-                let seconds = ts / 1_000_000_000;
-                let nanos = ts % 1_000_000_000;
-                format!("{}.{:09}", seconds, nanos)
-            })
-            .unwrap_or(
-                SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs_f64()
-                    .to_string(),
-            );
+       
+
+        let timestamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
 
         // Create a tracing event with the appropriate level
         match level {

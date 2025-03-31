@@ -90,7 +90,7 @@ pub struct MetricContext {
 #[derive(Debug, Clone)]
 pub struct LogContext {
     pub level: LogLevel,
-    pub timestamp: Option<u128>,
+    pub timestamp: Option<u64>,
     pub message: String,
     pub target: Option<String>,
     pub attributes: HashMap<String, AttributeValue>,
@@ -106,7 +106,7 @@ impl LogContext {
             timestamp: Some(SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .expect("Time went backwards")
-                .as_nanos()),
+                .as_secs()),
         }
     }
     
@@ -120,7 +120,7 @@ impl LogContext {
         self
     }
     
-    pub fn with_timestamp(mut self, timestamp: u128) -> Self {
+    pub fn with_timestamp(mut self, timestamp: u64) -> Self {
         self.timestamp = Some(timestamp);
         self
     }

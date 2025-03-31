@@ -31,7 +31,7 @@ where
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
     // Initialize telemetry
-    init_datadog().await?;
+    init_datadog(None).await?;
 
     // Create metrics that we'll use throughout the application
     // Wrap them in Arc to make them shareable across tasks
