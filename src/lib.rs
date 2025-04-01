@@ -319,17 +319,17 @@ macro_rules! log {
             .with_target($target))
     };
     ($level:expr, $message:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::telemetry::log($crate::LogContext::new($message.to_string(), level: $level))
+        $crate::telemetry::log($crate::LogContext::new($message.to_string(), level: $level)
             .with_attributes(vec![
                 $(($key.to_string(), $value.into())),+
-            ])
+            ]))
     };
     ($level:expr, $message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
         $crate::telemetry::log($crate::LogContext::new($message.to_string(), level: $level)
-            .with_target($target))
+            .with_target($target)
             .with_attributes(vec![
                 $(($key.to_string(), $value.into())),+
-            ])
+            ]))
     };
 }
 
@@ -357,17 +357,17 @@ macro_rules! debug_log {
             .with_target($target))
     };
     ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Debug))
+        $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Debug)
             .with_attributes(vec![
                 $(($key.to_string(), $value.into())),+
-            ])
+            ]))
     };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
         $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Debug)
-            .with_target($target))
+            .with_target($target)
             .with_attributes(vec![
                 $(($key.to_string(), $value.into())),+
-            ])
+            ]))
     };
 }
 /// Log a message at INFO level.
@@ -401,10 +401,10 @@ macro_rules! info_log {
     };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
         $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Info)
-            .with_target($target))
+            .with_target($target)
             .with_attributes(vec![
                 $(($key.to_string(), $value.into())),+
-            ])
+            ]))
     };
 }
 
@@ -432,17 +432,17 @@ macro_rules! warn_log {
             .with_target($target))
     };
     ($message:expr, $($key:expr => $value:expr),+ $(,)?) => {
-        $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Warn))
+        $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Warn)
             .with_attributes(vec![
                 $(($key.to_string(), $value.into())),+
-            ])
+            ]))
     };
     ($message:expr, target: $target:expr, $($key:expr => $value:expr),+ $(,)?) => {
         $crate::telemetry::log($crate::LogContext::new($message.to_string(), $crate::LogLevel::Warn)
-            .with_target($target))
+            .with_target($target)
             .with_attributes(vec![
                 $(($key.to_string(), $value.into())),+
-            ])
+            ]))
     };
 }
 
@@ -491,140 +491,13 @@ macro_rules! error_log {
     };
 }
 
-#[macro_export]
-macro_rules! dd_log {
-    ($level:expr, $message:expr $(, $attr_name:expr => $attr_value:expr)* $(,)?) => {{
-        // Use the native tracing macros with all attributes properly formatted
-        match $level {
-            $crate::LogLevel::Debug => {
-                tracing::debug!(
-                    target: module_path!(),
-                    $($attr_name = $attr_value,)*
-                    timestamp = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos() as u64,
-                    $message
-                );
-            },
-            $crate::LogLevel::Info => {
-                tracing::info!(
-                    target: module_path!(),
-                    $($attr_name = $attr_value,)*
-                    timestamp = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos() as u64,
-                    $message
-                );
-            },
-            $crate::LogLevel::Warn => {
-                tracing::warn!(
-                    target: module_path!(),
-                    $($attr_name = $attr_value,)*
-                    timestamp = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos() as u64,
-                    $message
-                );
-            },
-            $crate::LogLevel::Error | $crate::LogLevel::Critical => {
-                tracing::error!(
-                    target: module_path!(),
-                    $($attr_name = $attr_value,)*
-                    timestamp = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos() as u64,
-                    $message
-                );
-            },
-            $crate::LogLevel::Trace => {
-                tracing::trace!(
-                    target: module_path!(),
-                    $($attr_name = $attr_value,)*
-                    timestamp = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos() as u64,
-                    $message
-                );
-            },
-        }
-    }};
-}
-
-#[macro_export]
-macro_rules! dd_debug {
-    ($message:expr $(, $attr_name:expr => $attr_value:expr)* $(,)?) => {
-        $crate::dd_log!($crate::LogLevel::Debug, $message $(, $attr_name => $attr_value)*)
-    };
-}
-
-#[macro_export]
-macro_rules! dd_info {
-    ($message:expr $(, $attr_name:expr => $attr_value:expr)* $(,)?) => {
-        $crate::dd_log!($crate::LogLevel::Info, $message $(, $attr_name => $attr_value)*)
-    };
-}
-
-#[macro_export]
-macro_rules! dd_warn {
-    ($message:expr $(, $attr_name:expr => $attr_value:expr)* $(,)?) => {
-        $crate::dd_log!($crate::LogLevel::Warn, $message $(, $attr_name => $attr_value)*)
-    };
-}
-
-#[macro_export]
-macro_rules! dd_error {
-    ($message:expr $(, $attr_name:expr => $attr_value:expr)* $(,)?) => {
-        $crate::dd_log!($crate::LogLevel::Error, $message $(, $attr_name => $attr_value)*)
-    };
-}
-
-#[macro_export]
-macro_rules! dd_error_ex {
-    ($error:expr $(, $attr_name:expr => $attr_value:expr)* $(,)?) => {{
-        use std::convert::Into;
-        use std::error::Error;
-        
-        let error_box: Box<dyn Error> = $error.into();
-        let error_message = error_box.to_string();
-        
-        // Extract stack trace
-        let mut stack_trace = String::new();
-        let mut current_error: Option<&dyn Error> = Some(&*error_box);
-        while let Some(err) = current_error {
-            stack_trace.push_str(&format!("    at {}\n", err.to_string()));
-            current_error = err.source();
-        }
-        
-        // Extract error kind
-        let error_kind = std::any::type_name::<Box<dyn Error>>()
-            .split("::")
-            .last()
-            .unwrap_or("Error");
-            
-        // Location information
-        let location = format!("{}:{}", file!(), line!());
-        let thread_name = std::thread::current().name().unwrap_or("unknown").to_string();
-
-        // convert error to JSON
-        let message = format!("error.message={} error.stack={} error.kind={} error.origin={} logger.thread_name={}",
-        error_message, stack_trace, error_kind, location, thread_name);
-        
-        // Use tracing directly with all needed attributes
-        tracing::error!(
-            message
-        );
-    }};
-}
 
 
 #[cfg(test)]
 mod tests {
-    use crate::facade::init_datadog;
+    use std::time::Duration;
+
+    use crate::facade::{init_datadog, shutdown};
 
     use super::*;
     use tracing::Level;
@@ -643,7 +516,15 @@ mod tests {
         "user_id" => 42,
         "error_code" => 500,
         );
+    
+
+     shutdown().await.unwrap();
+ 
+     // Allow time for traces to be sent
+     tokio::time::sleep(Duration::from_secs(2)).await;
     }
+ 
+
 
 }
 
