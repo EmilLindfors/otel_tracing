@@ -3,12 +3,9 @@
 use opentelemetry::context::FutureExt;
 use opentelemetry::Context;
 use otel_tracing::{
-    counter, debug_log, error_log,
-    facade::MetricUnit,
-    gauge, histogram, info_log, span,
-    telemetry::{init_datadog, shutdown},
-    warn_log, with_async_span, with_span,
+    counter, dd_info, dd_log, debug_log, error_log, facade::{log, MetricUnit}, gauge, histogram, info_log, span, telemetry::{init_datadog, shutdown}, warn_log, with_async_span, with_span, LogLevel
 };
+use tracing::Level;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -31,11 +28,12 @@ where
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
     // Initialize telemetry
-    init_datadog(None).await?;
+    init_datadog("test_service".to_string(), None).await?;
 
-    // Create metrics that we'll use throughout the application
-    // Wrap them in Arc to make them shareable across tasks
-    println!("Creating test metrics...");
+
+    dd_info!(
+        "Initializing metrics"
+    );
 
     // Create metrics with Arc for sharing
     let test_counter = Arc::new(counter!("rust_test_service.request_count",
@@ -176,7 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Wait for all tasks and collect results
         let mut results = Vec::new();
         for (i, handle) in handles.into_iter().enumerate() {
-            info_log!("Waiting for task completion", "task_id" => i);
+            tracing::info!(target: "Waiting for task completion", task_id = i);
             let task_result = handle.await.unwrap();
             results.push(task_result);
         }
@@ -215,7 +213,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     })
     .await;
 
-    println!("Final result: {}", result);
+    let err: Box<dyn std::error::Error> = "An error occurred".into();
+
+
+    error_log!(err, 
+        "operation" => "process_data",
+        "user_id" => 42,
+        "error_code" => 500,
+        );
+
+
+    tracing::info!(target: "final result", result = result);
 
     // Shutdown telemetry
     info_log!("Shutting down telemetry");

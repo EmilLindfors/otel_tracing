@@ -6,6 +6,7 @@ use crate::domain::telemetry::{LogContext, MetricContext, SpanContext, Telemetry
 use crate::ports::logger::LoggerPort;
 use crate::ports::metrics::{Counter, Gauge, Histogram, MetricsPort};
 use crate::ports::tracer::{Span, TracerPort};
+use crate::AttributeValue;
 
 /// TelemetryService provides a unified interface for tracing, metrics, and logging
 pub struct TelemetryService {
@@ -85,6 +86,16 @@ impl TelemetryService {
     pub fn log(&self, context: LogContext) {
         self.logger.log(context)
     }
+
+    /// Log an error message
+    pub fn log_error(
+        &self,
+        error: Box<dyn std::error::Error>,
+        target: Option<&str>,
+        attributes: Vec<(String, AttributeValue)>,
+    ) {
+        self.logger.log_error(error, target, attributes)
+    }
 }
 
 /// A builder for configuring and creating a TelemetryService
@@ -140,12 +151,12 @@ impl TelemetryServiceBuilder {
     }
 
     /// Build a DataDog-based TelemetryService with default configuration
-    pub fn build_datadog() -> Result<TelemetryService, TelemetryError> {
+    pub fn build_datadog(service_name: String) -> Result<TelemetryService, TelemetryError> {
         use crate::adapters::datadog::{DatadogLogger, DatadogMetrics, DatadogTracer};
 
         let tracer = Arc::new(DatadogTracer::new());
         let metrics = Arc::new(DatadogMetrics::new());
-        let logger = Arc::new(DatadogLogger::new());
+        let logger = Arc::new(DatadogLogger::new(service_name));
 
         Ok(TelemetryService::new(tracer, metrics, logger))
     }

@@ -176,7 +176,6 @@ impl MetricsPort for DatadogMetrics {
     fn create_gauge(&self, context: MetricContext) -> Box<dyn Gauge> {
         // Apply DataDog naming conventions
         let metric_name = self.format_metric_name(&context.name);
-        info!("Creating gauge: {} (from {})", metric_name, context.name);
 
         // Get meter from gauge provider
         let meter = match self.gauge_meter_provider.lock().unwrap().as_ref() {

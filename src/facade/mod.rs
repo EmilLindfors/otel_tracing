@@ -38,8 +38,8 @@ pub async fn init(service: TelemetryService, filter: Option<EnvFilter>) -> Resul
 
 /// Initialize a DataDog-based telemetry service.
 /// This is a convenience function for common DataDog setup.
-pub async fn init_datadog(filter: Option<EnvFilter>) -> Result<(), TelemetryError> {
-    let service = crate::services::telemetry::TelemetryServiceBuilder::build_datadog()?;
+pub async fn init_datadog(service_name: String, filter: Option<EnvFilter>) -> Result<(), TelemetryError> {
+    let service = crate::services::telemetry::TelemetryServiceBuilder::build_datadog(service_name)?;
 
     init(service, filter).await
 }

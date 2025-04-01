@@ -12,6 +12,15 @@ pub fn log(context: LogContext) {
     service().log(context)
 }
 
+/// Log a message.
+pub fn log_error(
+    error: Box<dyn std::error::Error>,
+    target: Option<&str>,
+    attributes: Vec<(String, AttributeValue)>
+) {
+    service().log_error(error, target, attributes)
+}
+
 /// Log a message at DEBUG level
 pub fn debug(
     message: &str,
@@ -58,7 +67,7 @@ pub fn warn(
 }
 
 /// Log a message at ERROR level
-pub fn error(
+pub fn error_msg(
     message: &str,
     target: Option<&str>,
     attributes: Vec<(String, AttributeValue)>
