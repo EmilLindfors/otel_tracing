@@ -66,6 +66,7 @@ impl SpanContext {
 pub enum AttributeValue {
     String(String),
     Int(i64),
+    Uint(u128),
     Float(f64),
     Bool(bool),
 }
@@ -75,6 +76,7 @@ impl Display for AttributeValue {
         match self {
             AttributeValue::String(s) => write!(f, "{}", s),
             AttributeValue::Int(i) => write!(f, "{}", i),
+            AttributeValue::Uint(u) => write!(f, "{}", u),
             AttributeValue::Float(fl) => write!(f, "{}", fl),
             AttributeValue::Bool(b) => write!(f, "{}", b),
         }
@@ -83,7 +85,9 @@ impl Display for AttributeValue {
 
 impl AttributeValue {
     pub fn parse(value: &str) -> Self {
-        if let Ok(int_value) = value.parse::<i64>() {
+        if let Ok(uint_value) = value.parse::<u128>() {
+            AttributeValue::Uint(uint_value)
+        } else if let Ok(int_value) = value.parse::<i64>() {
             AttributeValue::Int(int_value)
         } else if let Ok(float_value) = value.parse::<f64>() {
             AttributeValue::Float(float_value)
@@ -192,12 +196,12 @@ impl LogContext {
         self
     }
 
-    pub fn with_attributes(mut self, attributes: Vec<(std::string::String, AttributeValue)>) -> Self {
-        self.attributes.extend(
-            attributes
-                .into_iter()
-                .map(|(k, v)| (k, v)),
-        );
+    pub fn with_attributes(
+        mut self,
+        attributes: Vec<(std::string::String, AttributeValue)>,
+    ) -> Self {
+        self.attributes
+            .extend(attributes.into_iter().map(|(k, v)| (k, v)));
         self
     }
 
@@ -246,6 +250,12 @@ impl From<u64> for AttributeValue {
 impl From<u32> for AttributeValue {
     fn from(value: u32) -> Self {
         Self::Int(value as i64)
+    }
+}
+
+impl From<u128> for AttributeValue {
+    fn from(value: u128) -> Self {
+        Self::Uint(value)
     }
 }
 
@@ -302,5 +312,6 @@ pub fn to_key_value(key: String, value: &AttributeValue) -> KeyValue {
         AttributeValue::Int(i) => KeyValue::new(key, *i),
         AttributeValue::Float(f) => KeyValue::new(key, *f),
         AttributeValue::Bool(b) => KeyValue::new(key, *b),
+        AttributeValue::Uint(u) => KeyValue::new(key, u.to_string()),
     }
 }

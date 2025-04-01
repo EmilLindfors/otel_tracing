@@ -8,7 +8,7 @@ use opentelemetry_sdk::logs::SdkLoggerProvider;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::SystemTime;
-use tracing::debug;
+use tracing::{debug, event};
 use tracing::error;
 use tracing::info;
 use tracing::warn;
@@ -172,7 +172,7 @@ impl LoggerPort for DatadogLogger {
 
         // Create a standard formatting layer
         let filter_fmt =
-            EnvFilter::new("info").add_directive("opentelemetry=debug".parse().unwrap());
+            EnvFilter::new("info").add_directive("opentelemetry=info".parse().unwrap());
 
         let fmt_layer = tracing_subscriber::fmt::layer()
             .with_thread_names(true)
@@ -245,8 +245,6 @@ impl LoggerPort for DatadogLogger {
         let level = Self::to_tracing_level(context.level);
         let status = Self::to_datadog_status(context.level);
 
-        
-
         let timestamp = context.timestamp.unwrap_or_else(|| {
             SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
@@ -269,131 +267,52 @@ impl LoggerPort for DatadogLogger {
             );
         }
 
+        // Add timestamp to attributes if not present
+        if !attributes.contains_key("timestamp") {
+            attributes.insert("timestamp".to_string(), AttributeValue::Uint(timestamp));
+        }
+
         let datadog_attributes = Self::transform_attributes_to_datadog_format(attributes);
-        
-        //create a string from the attributes
-        let dd_attrs = datadog_attributes
-            .iter()
-            .map(|(k, v)| format!("{} = {}", k, v))
-            .collect::<Vec<_>>()
-            .join(", ");
 
-        let message = context.message.clone();
+        // Convert the attributes to a format that tracing can use
+        let mut event_fields = Vec::new();
+        for (key, value) in datadog_attributes {
+            let field_value = match value {
+                AttributeValue::String(s) => format!("{}={}", key, s),
+                AttributeValue::Int(i) => format!("{}={}", key, i),
+                AttributeValue::Uint(u) => format!("{}={}", key, u),
+                AttributeValue::Float(f) => format!("{}={}", key, f),
+                AttributeValue::Bool(b) => format!("{}={}", key, b),
+            };
+            event_fields.push(field_value);
+        }
 
-        println!("message and level: {} - {}", message, dd_attrs);
-       
-        
+        // Join the attributes into a single string for logging
+        let attributes_str = if !event_fields.is_empty() {
+            format!(" [{}]", event_fields.join(", "))
+        } else {
+            String::new()
+        };
 
-        // Create a tracing event with the appropriate level
+        // Create a message that includes both the original message and attributes
+        let full_message = format!("{}{}", context.message, attributes_str);
+
+        // Emit the event directly at the appropriate level
         match level {
             Level::ERROR => {
-                 // Create a span with all attributes properly attached
-                 let span_builder = tracing::span!(
-                    parent: None, 
-                    Level::ERROR, 
-                    "error_log",
-                    message = %context.message,
-                    timestamp = %timestamp
-                );
-                
-                // Add all attributes to the span
-                for (key, value) in &datadog_attributes {
-                    match value {
-                        AttributeValue::String(s) => { span_builder.record(key.as_str(), &s.as_str()); },
-                        AttributeValue::Int(i) => { span_builder.record(key.as_str(), &i); },
-                        AttributeValue::Float(f) => { span_builder.record(key.as_str(), &f); },
-                        AttributeValue::Bool(b) => { span_builder.record(key.as_str(), &b); },
-                    }
-                }
-                
-                // Enter the span to make it the current span
-                let _guard = span_builder.enter();
-                
-                // Log the event within the span context
-                error!(target = target, "{}", context.message);
+                error!(parent: None, %target, "{}", full_message);
             }
             Level::WARN => {
-              // Create a span with all attributes properly attached
-              let span_builder = tracing::span!(
-                parent: None, 
-                Level::WARN, 
-                "warn_log",
-                message = %context.message,
-                timestamp = %timestamp
-            );
-            
-            // Add all attributes to the span
-            for (key, value) in &datadog_attributes {
-                match value {
-                    AttributeValue::String(s) => { span_builder.record(key.as_str(), &s.as_str()); },
-                    AttributeValue::Int(i) => { span_builder.record(key.as_str(), &i); },
-                    AttributeValue::Float(f) => { span_builder.record(key.as_str(), &f); },
-                    AttributeValue::Bool(b) => { span_builder.record(key.as_str(), &b); },
-                }
-            }
-            
-            // Enter the span to make it the current span
-            let _guard = span_builder.enter();
-            
-            // Log the event within the span context
-            warn!(target = target, "{}", context.message);
+                warn!(parent: None, %target, "{}", full_message);
             }
             Level::INFO => {
-                // Create a span with all attributes properly attached
-                let span_builder = tracing::span!(
-                    parent: None, 
-                    Level::INFO, 
-                    "info_log",
-                    message = %context.message,
-                    timestamp = %timestamp
-                );
-                
-                // Add all attributes to the span
-                for (key, value) in &datadog_attributes {
-                    match value {
-                        AttributeValue::String(s) => { span_builder.record(key.as_str(), &s.as_str()); },
-                        AttributeValue::Int(i) => { span_builder.record(key.as_str(), &i); },
-                        AttributeValue::Float(f) => { span_builder.record(key.as_str(), &f); },
-                        AttributeValue::Bool(b) => { span_builder.record(key.as_str(), &b); },
-                    }
-                }
-                
-                // Enter the span to make it the current span
-                let _guard = span_builder.enter();
-                
-                // Log the event within the span context
-                info!(target = target, "{}", context.message);
+                info!(parent: None, %target, "{}", full_message);
             }
             Level::DEBUG => {
-                // Create a span with all attributes properly attached
-                let mut span_builder = tracing::span!(
-                    parent: None, 
-                    Level::DEBUG, 
-                    "debug_log",
-                    message = %context.message,
-                    timestamp = %timestamp
-                );
-                
-                // Add all attributes to the span
-                for (key, value) in &datadog_attributes {
-                    match value {
-                        AttributeValue::String(s) => { span_builder.record(key.as_str(), &s.as_str()); },
-                        AttributeValue::Int(i) => { span_builder.record(key.as_str(), &i); },
-                        AttributeValue::Float(f) => { span_builder.record(key.as_str(), &f); },
-                        AttributeValue::Bool(b) => { span_builder.record(key.as_str(), &b); },
-                    }
-                }
-                
-                
-                // Enter the span to make it the current span
-                let _guard = span_builder.enter();
-                
-                // Log the event within the span context
-                debug!(target = target, "{}", context.message);
+                debug!(parent: None, %target, "{}", full_message);
             }
-            _ => {
-                // Use info for any other level
-                println!("{:?}: {}", context.level, context.message);
+            Level::TRACE => {
+                tracing::trace!(parent: None, %target, "{}", full_message);
             }
         }
     }
@@ -407,5 +326,46 @@ impl LoggerPort for DatadogLogger {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DatadogLogger;
+    use crate::domain::telemetry::{AttributeValue, LogContext, TelemetryError};
+    use crate::facade::{init_datadog, shutdown};
+    use crate::ports::logger::LoggerPort;
+    use crate::LogLevel;
+    use std::collections::HashMap;
+
+    #[tokio::test]
+    async fn test_logger_error_logging() {
+        init_datadog("test_service".to_string(), None)
+            .await
+            .unwrap();
+        let logger = DatadogLogger::new("test_service");
+        let _ = logger.init(None);
+
+        let error_message = "Test error message".to_string();
+        let error = Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            error_message.clone(),
+        ));
+
+        let attributes: Vec<(String, AttributeValue)> = vec![
+            (
+                "key1".to_string(),
+                AttributeValue::String("value1".to_string()),
+            ),
+            ("key2".to_string(), AttributeValue::Int(42)),
+        ];
+
+        logger.log_error(error, Some("test_target"), attributes);
+
+        // Check if the log was created (this is a placeholder, actual verification would depend on the logging backend)
+        assert_eq!(logger.service_name, "test_service");
+
+        shutdown().await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }
 }

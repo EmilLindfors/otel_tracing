@@ -3,13 +3,17 @@
 use opentelemetry::context::FutureExt;
 use opentelemetry::Context;
 use otel_tracing::{
-    counter, dd_info, dd_log, debug_log, error_log, facade::{log, MetricUnit}, gauge, histogram, info_log, span, telemetry::{init_datadog, shutdown}, warn_log, with_async_span, with_span, LogLevel
+    counter, debug_log, error_log,
+    facade::{log, MetricUnit},
+    gauge, histogram, info_log, span,
+    telemetry::{init_datadog, shutdown},
+    warn_log, with_async_span, with_span, LogLevel,
 };
-use tracing::Level;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use tracing::Level;
 
 /// Helper function to spawn a task that preserves trace context
 pub fn spawn_with_context<F, R>(future: F) -> tokio::task::JoinHandle<R>
@@ -30,10 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize telemetry
     init_datadog("test_service".to_string(), None).await?;
 
-
-    dd_info!(
-        "Initializing metrics"
-    );
+    info_log!("Initializing metrics");
 
     // Create metrics with Arc for sharing
     let test_counter = Arc::new(counter!("rust_test_service.request_count",
@@ -215,15 +216,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let err: Box<dyn std::error::Error> = "An error occurred".into();
 
+    error_log!(err,
+    "operation" => "process_data",
+    "user_id" => 42,
+    "error_code" => 500,
+    );
 
-    error_log!(err, 
-        "operation" => "process_data",
-        "user_id" => 42,
-        "error_code" => 500,
-        );
-
-
-    tracing::info!(target: "final result", result = result);
+    info_log!("final result", result => result);
 
     // Shutdown telemetry
     info_log!("Shutting down telemetry");

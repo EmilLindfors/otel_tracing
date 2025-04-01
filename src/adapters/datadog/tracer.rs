@@ -113,6 +113,7 @@ impl Span for DatadogSpan {
             AttributeValue::Int(i) => KeyValue::new(key, *i),
             AttributeValue::Float(f) => KeyValue::new(key, *f),
             AttributeValue::Bool(b) => KeyValue::new(key, *b),
+            AttributeValue::Uint(u) => KeyValue::new(key, u.to_string()),
         };
         
         // Use the TraceContextExt to get the span from the context
