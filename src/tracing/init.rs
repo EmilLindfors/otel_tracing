@@ -8,6 +8,9 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Layer, Registry};
 
+use super::shutdown::TracerShutdown;
+use super::tracer::build_tracer;
+
 fn loglevel_filter_layer(dd_enabled: bool) -> EnvFilter {
     let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
 

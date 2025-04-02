@@ -1,8 +1,8 @@
-mod adapters;
-mod domain;
+pub mod adapters;
+pub mod domain;
 //pub mod tracing;
 pub mod facade;
-mod ports;
+pub mod ports;
 mod services;
 pub use domain::telemetry::{
     AttributeValue, LogContext, LogLevel, MetricContext, SpanContext, TelemetryError,

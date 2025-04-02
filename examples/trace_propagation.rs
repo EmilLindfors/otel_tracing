@@ -1,32 +1,14 @@
-// Making metrics shareable across tasks using Arc
-
-use opentelemetry::context::FutureExt;
-use opentelemetry::Context;
 use otel_tracing::{
-    counter, debug_log, error_log,
-    facade::{log, MetricUnit},
-    gauge, histogram, info_log, span,
+    counter, error_log,
+    facade::MetricUnit,
+    gauge, histogram, info_log, spawn_with_context,
     telemetry::{init_datadog, shutdown},
-    warn_log, with_async_span, with_span, LogLevel,
+    with_async_span, with_span,
 };
 use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tracing::Level;
-
-/// Helper function to spawn a task that preserves trace context
-pub fn spawn_with_context<F, R>(future: F) -> tokio::task::JoinHandle<R>
-where
-    F: std::future::Future<Output = R> + Send + 'static,
-    R: Send + 'static,
-{
-    // Capture the current context before spawning
-    let parent_context = Context::current();
-
-    // Use opentelemetry_futures to propagate context without a guard
-    tokio::spawn(future.with_context(parent_context))
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
