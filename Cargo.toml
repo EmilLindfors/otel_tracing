@@ -9,7 +9,7 @@ tokio = { version = "1.44.1", features = ["full"] }
 opentelemetry = "0.29"
 opentelemetry-otlp = { version = "0.29.0", features = ["grpc-tonic"] }
 opentelemetry-resource-detectors = { git ="https://github.com/open-telemetry/opentelemetry-rust-contrib.git"}
-opentelemetry_sdk = "0.29"
+opentelemetry_sdk = { version ="0.29", features = ["experimental_trace_batch_span_processor_with_async_runtime", "rt-tokio", "spec_unstable_logs_enabled", "experimental_async_runtime", "experimental_logs_batch_log_processor_with_async_runtime"] }
 dotenvy = "0.15.7"
 tracing = "0.1.41"
 opentelemetry-appender-tracing = "0.29"
@@ -32,7 +32,11 @@ reqwest = "0.12.15"
 
 [[example]]
 name = "tr"
-path = "examples/trace_propagation.rs"
+path = "examples/main.rs"
+
+[[example]]
+name = "log"
+path = "examples/log.rs"
 
 [dev-dependencies]
 mockall = "0.13.1"

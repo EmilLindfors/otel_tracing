@@ -1162,7 +1162,7 @@ dependencies = [
 [[package]]
 name = "opentelemetry-resource-detectors"
 version = "0.7.0"
-source = "git+https://github.com/open-telemetry/opentelemetry-rust-contrib.git#e069bd561b9d4d308d16d4a37bbc8c07f5a39f04"
+source = "git+https://github.com/open-telemetry/opentelemetry-rust-contrib.git#68a7ed15bea4a6d93001b1a0750a02985c9766ea"
 dependencies = [
  "opentelemetry 0.29.0",
  "opentelemetry-semantic-conventions",
@@ -1210,6 +1210,8 @@ dependencies = [
  "rand 0.9.0",
  "serde_json",
  "thiserror 2.0.12",
+ "tokio",
+ "tokio-stream",
  "tracing",
 ]
 
@@ -1617,9 +1619,9 @@ checksum = "719b953e2095829ee67db738b3bfa9fa368c94900df327b3f07fe6e794d2fe1f"
 
 [[package]]
 name = "rustix"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a04a32fb43fcdef85b977ce7f77a150805e4b2ea1f2656898d4a547dde78df6"
+checksum = "d97817398dd4bb2e6da002002db259209759911da105da92bec29ccb12cf58bf"
 dependencies = [
  "bitflags",
  "errno",

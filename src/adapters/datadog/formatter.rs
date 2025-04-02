@@ -3,8 +3,7 @@
 //! Datadog's trace ID and span ID format is different from the OpenTelemetry standard.
 //! Using this formatter, the trace ID is converted to the correct format.
 //! It also adds the trace ID to the `dd.trace_id` field and the span ID to the
-//! `dd.span_id` field, which is where Datadog looks for these by default
-//! (although the path to the trace ID can be overridden in Datadog).
+//! `dd.span_id` field, which is where Datadog looks for these by default.
 
 use std::io;
 
@@ -20,10 +19,12 @@ use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields};
 use tracing_subscriber::registry::{LookupSpan, SpanRef};
 
+/// Datadog-compatible ID representation
 #[derive(Serialize)]
-struct DatadogId(u64);
+pub struct DatadogId(u64);
 
-struct TraceInfo {
+/// Information about the current trace
+pub struct TraceInfo {
     trace_id: DatadogId,
     span_id: DatadogId,
 }
@@ -41,6 +42,7 @@ impl From<SpanId> for DatadogId {
     }
 }
 
+/// Looks up trace information from the span reference
 fn lookup_trace_info<S>(span_ref: &SpanRef<S>) -> Option<TraceInfo>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
@@ -58,7 +60,7 @@ where
     })
 }
 
-// mostly stolen from here: https://github.com/tokio-rs/tracing/issues/1531
+/// Formatter that emits events in a way that Datadog can correlate with traces
 pub struct DatadogFormatter;
 
 impl<S, N> FormatEvent<S, N> for DatadogFormatter
@@ -84,11 +86,12 @@ where
             serializer.serialize_entry("level", &meta.level().as_serde())?;
             serializer.serialize_entry("target", meta.target())?;
 
-            // fields -> stolen from https://github.com/tokio-rs/tracing/blob/tracing-subscriber-0.3.17/tracing-subscriber/src/fmt/format/json.rs#L263-L268
+            // Add event fields
             let mut visitor = tracing_serde::SerdeMapVisitor::new(serializer);
             event.record(&mut visitor);
             serializer = visitor.take_serializer()?;
 
+            // Add trace correlation IDs if available
             if let Some(ref span_ref) = ctx.lookup_current() {
                 if let Some(trace_info) = lookup_trace_info(span_ref) {
                     serializer.serialize_entry("dd.span_id", &trace_info.span_id)?;
@@ -104,6 +107,7 @@ where
     }
 }
 
+/// Adapter to convert std::fmt::Write to io::Write
 struct WriteAdaptor<'a> {
     fmt_write: &'a mut dyn std::fmt::Write,
 }

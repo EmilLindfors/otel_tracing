@@ -1,2 +1,3 @@
 pub mod telemetry;
-pub mod metrics;
+
+pub use telemetry::{Level, TelemetryEvent};
